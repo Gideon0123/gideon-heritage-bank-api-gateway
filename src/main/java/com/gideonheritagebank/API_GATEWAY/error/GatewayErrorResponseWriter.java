@@ -20,7 +20,6 @@ public class GatewayErrorResponseWriter {
 
     public static final String REQUEST_ID_ATTRIBUTE =
             GatewayErrorResponseWriter.class.getName() + ".requestId";
-
     private final ObjectMapper objectMapper;
 
     public GatewayErrorResponseWriter(ObjectMapper objectMapper) {

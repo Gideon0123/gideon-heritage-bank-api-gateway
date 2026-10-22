@@ -49,29 +49,24 @@ public class GatewaySecurityConfig {
                 );
 
         return http
-                // This is a stateless bearer-token API.
                 .csrf(csrf -> csrf
                         .csrfTokenRepository(
                                 CookieServerCsrfTokenRepository.withHttpOnlyFalse()
                         )
                 )
 
-                // Do not enable browser form login or HTTP Basic.
                 .httpBasic(ServerHttpSecurity.HttpBasicSpec::disable)
                 .formLogin(ServerHttpSecurity.FormLoginSpec::disable)
                 .logout(ServerHttpSecurity.LogoutSpec::disable)
 
                 .authorizeExchange(exchanges -> exchanges
 
-                        // Public operational health check.
                         .pathMatchers(
                                 HttpMethod.GET,
                                 "/actuator/health",
                                 "/actuator/health/**"
                         ).permitAll()
 
-                        // Public identity endpoints.
-                        // Keep these aligned with the identity controllers.
                         .pathMatchers(
                                 HttpMethod.POST,
                                 "/api/v1/identity/auth/login",
@@ -82,7 +77,6 @@ public class GatewaySecurityConfig {
                                 "/api/v1/identity/auth/refresh-token"
                         ).permitAll()
 
-                        // Staff-only APIs.
                         .pathMatchers("/api/v1/identity/staff/**")
                         .hasAnyAuthority(
                                 "ROLE_STAFF",
@@ -90,11 +84,9 @@ public class GatewaySecurityConfig {
                                 "ROLE_ADMIN"
                         )
 
-                        // Administrative APIs.
                         .pathMatchers("/api/v1/identity/admin/**")
                         .hasAuthority("ROLE_ADMIN")
 
-                        // Risk administration is restricted.
                         .pathMatchers("/api/v1/risk/**")
                         .hasAnyAuthority(
                                 "ROLE_ADMIN",
@@ -102,10 +94,8 @@ public class GatewaySecurityConfig {
                                 "SCOPE_risk:read"
                         )
 
-                        // Never expose other actuator endpoints publicly.
                         .pathMatchers("/actuator/**").denyAll()
 
-                        // Everything else requires a valid JWT.
                         .anyExchange().authenticated()
                 )
 
@@ -136,8 +126,7 @@ public class GatewaySecurityConfig {
             String audience) {
 
         NimbusReactiveJwtDecoder decoder = NimbusReactiveJwtDecoder.withJwkSetUri(jwkSetUri)
-                .jwsAlgorithm(SignatureAlgorithm.RS256)
-                .build();
+                .jwsAlgorithm(SignatureAlgorithm.RS256).build();
 
         OAuth2TokenValidator<Jwt> issuerAndTimestampValidator =
                 JwtValidators.createDefaultWithIssuer(issuerUri);

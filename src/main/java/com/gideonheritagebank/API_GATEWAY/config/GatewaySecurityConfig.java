@@ -94,9 +94,13 @@ public class GatewaySecurityConfig {
                                 "SCOPE_risk:read"
                         )
 
+                        .pathMatchers(HttpMethod.GET, "/csrf").permitAll()
+                        .pathMatchers("/fallback/**").permitAll()
+
                         .pathMatchers("/actuator/**").denyAll()
 
-                        .anyExchange().authenticated()
+                        .pathMatchers("/api/v1/**").authenticated()
+                        .anyExchange().permitAll()
                 )
 
                 .oauth2ResourceServer(oauth2 -> oauth2

@@ -12,20 +12,20 @@ import reactor.core.publisher.Mono;
 @RequestMapping("/fallback")
 public class GatewayFallbackController {
 
-    private final GatewayErrorResponseWriter errorWriter;
+    private final GatewayErrorResponseWriter errorResponseWriter;
 
     public GatewayFallbackController(
-            GatewayErrorResponseWriter errorWriter) {
-        this.errorWriter = errorWriter;
+            GatewayErrorResponseWriter errorResponseWriter) {
+        this.errorResponseWriter = errorResponseWriter;
     }
 
     @RequestMapping("/gateway")
     public Mono<Void> gatewayFallback(ServerWebExchange exchange) {
-        return errorWriter.write(
+        return errorResponseWriter.write(
                 exchange,
                 HttpStatus.SERVICE_UNAVAILABLE,
                 "DOWNSTREAM_SERVICE_UNAVAILABLE",
-                "The requested service is temporarily unavailable. Please try again later."
+                "The requested banking service is temporarily unavailable. Please try again later."
         );
     }
 }

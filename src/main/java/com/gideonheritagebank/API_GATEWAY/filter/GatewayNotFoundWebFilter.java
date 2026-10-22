@@ -2,6 +2,7 @@ package com.gideonheritagebank.API_GATEWAY.filter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.gideonheritagebank.API_GATEWAY.error.ApiErrorResponse;
+import com.gideonheritagebank.API_GATEWAY.error.GatewayErrorResponseWriter;
 import org.springframework.cloud.gateway.support.ServerWebExchangeUtils;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
@@ -66,7 +67,9 @@ public class GatewayNotFoundWebFilter implements WebFilter {
                 "GATEWAY_ROUTE_NOT_FOUND",
                 "No gateway route matches the requested resource.",
                 exchange.getRequest().getPath().value(),
-                exchange.getAttribute("requestId")
+                exchange.getAttribute(
+                        GatewayErrorResponseWriter.REQUEST_ID_ATTRIBUTE
+                )
         );
 
         response.setStatusCode(HttpStatus.NOT_FOUND);

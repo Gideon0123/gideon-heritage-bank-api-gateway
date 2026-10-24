@@ -23,10 +23,50 @@ import org.springframework.security.web.server.csrf.CookieServerCsrfTokenReposit
 import org.springframework.security.oauth2.jose.jws.SignatureAlgorithm;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.oauth2.server.resource.authentication.ReactiveJwtAuthenticationConverterAdapter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.reactive.CorsConfigurationSource;
+import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource;
 
 @Configuration
 @EnableWebFluxSecurity
 public class GatewaySecurityConfig {
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+
+        configuration.setAllowedOrigins(List.of(
+                "http://localhost:3000",
+                "http://localhost:4200"
+        ));
+
+        configuration.setAllowedMethods(List.of(
+                "GET",
+                "POST",
+                "PUT",
+                "PATCH",
+                "DELETE",
+                "OPTIONS"
+        ));
+
+        configuration.setAllowedHeaders(List.of(
+                "Authorization",
+                "Content-Type",
+                "Accept",
+                "X-Request-Id",
+                "X-XSRF-TOKEN"
+        ));
+
+        configuration.setAllowCredentials(true);
+        configuration.setMaxAge(3600L);
+
+        UrlBasedCorsConfigurationSource source =
+                new UrlBasedCorsConfigurationSource();
+
+        source.registerCorsConfiguration("/**", configuration);
+
+        return source;
+    }
 
     @Bean
     public SecurityWebFilterChain gatewaySecurityFilterChain(
@@ -34,7 +74,8 @@ public class GatewaySecurityConfig {
             JwtAuthoritiesConverter authoritiesConverter,
             CookieOrHeaderBearerTokenConverter tokenConverter,
             JsonAuthenticationEntryPoint authenticationEntryPoint,
-            JsonAccessDeniedHandler accessDeniedHandler) {
+            JsonAccessDeniedHandler accessDeniedHandler,
+            CorsConfigurationSource corsConfigurationSource) {
 
         JwtAuthenticationConverter jwtAuthenticationConverter =
                 new JwtAuthenticationConverter();
@@ -49,6 +90,8 @@ public class GatewaySecurityConfig {
                 );
 
         return http
+                .cors(cors -> cors.configurationSource(corsConfigurationSource))
+
                 .csrf(csrf -> csrf
                         .csrfTokenRepository(
                                 CookieServerCsrfTokenRepository.withHttpOnlyFalse()
@@ -60,6 +103,9 @@ public class GatewaySecurityConfig {
                 .logout(ServerHttpSecurity.LogoutSpec::disable)
 
                 .authorizeExchange(exchanges -> exchanges
+
+                        // CORS preflight must be handled without authentication.
+                        .pathMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
                         .pathMatchers(
                                 HttpMethod.GET,
@@ -95,11 +141,13 @@ public class GatewaySecurityConfig {
                         )
 
                         .pathMatchers(HttpMethod.GET, "/csrf").permitAll()
+
                         .pathMatchers("/fallback/**").permitAll()
 
                         .pathMatchers("/actuator/**").denyAll()
 
                         .pathMatchers("/api/v1/**").authenticated()
+
                         .anyExchange().permitAll()
                 )
 
@@ -129,8 +177,10 @@ public class GatewaySecurityConfig {
             @Value("${bank.security.jwt.audience}")
             String audience) {
 
-        NimbusReactiveJwtDecoder decoder = NimbusReactiveJwtDecoder.withJwkSetUri(jwkSetUri)
-                .jwsAlgorithm(SignatureAlgorithm.RS256).build();
+        NimbusReactiveJwtDecoder decoder =
+                NimbusReactiveJwtDecoder.withJwkSetUri(jwkSetUri)
+                        .jwsAlgorithm(SignatureAlgorithm.RS256)
+                        .build();
 
         OAuth2TokenValidator<Jwt> issuerAndTimestampValidator =
                 JwtValidators.createDefaultWithIssuer(issuerUri);
@@ -161,3 +211,4 @@ public class GatewaySecurityConfig {
         return decoder;
     }
 }
+

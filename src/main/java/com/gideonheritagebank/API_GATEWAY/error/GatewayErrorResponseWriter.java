@@ -2,6 +2,7 @@ package com.gideonheritagebank.API_GATEWAY.error;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.Map;
 import java.util.UUID;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -20,6 +21,7 @@ public class GatewayErrorResponseWriter {
 
     public static final String REQUEST_ID_ATTRIBUTE =
             GatewayErrorResponseWriter.class.getName() + ".requestId";
+
     private final ObjectMapper objectMapper;
 
     public GatewayErrorResponseWriter(ObjectMapper objectMapper) {
@@ -38,20 +40,20 @@ public class GatewayErrorResponseWriter {
             return Mono.empty();
         }
 
-        String requestId = exchange.getAttribute(REQUEST_ID_ATTRIBUTE);
+        String traceId = exchange.getAttribute(REQUEST_ID_ATTRIBUTE);
 
-        if (requestId == null || requestId.isBlank()) {
-            requestId = UUID.randomUUID().toString();
+        if (traceId == null || traceId.isBlank()) {
+            traceId = UUID.randomUUID().toString();
         }
 
         ApiErrorResponse error = new ApiErrorResponse(
                 Instant.now(),
+                false,
                 status.value(),
-                status.getReasonPhrase(),
-                code,
                 message,
+                Map.of("code", code),
                 exchange.getRequest().getPath().value(),
-                requestId
+                traceId
         );
 
         byte[] bytes;
@@ -60,15 +62,18 @@ public class GatewayErrorResponseWriter {
             bytes = objectMapper.writeValueAsString(error)
                     .getBytes(StandardCharsets.UTF_8);
         } catch (JsonProcessingException exception) {
-            // Safe minimal JSON fallback if serialization fails.
-            bytes = ("{\"status\":" + status.value()
-                    + ",\"code\":\"INTERNAL_ERROR\"}")
-                    .getBytes(StandardCharsets.UTF_8);
+            bytes = (
+                    "{\"success\":false,"
+                            + "\"status\":" + status.value() + ","
+                            + "\"message\":\"Request could not be processed\"}"
+            ).getBytes(StandardCharsets.UTF_8);
         }
 
         response.setStatusCode(status);
         response.getHeaders().setContentType(MediaType.APPLICATION_JSON);
         response.getHeaders().setContentLength(bytes.length);
+        response.getHeaders().set("X-Request-Id", traceId);
+        response.getHeaders().setCacheControl("no-store");
 
         return response.writeWith(Mono.just(
                 response.bufferFactory().wrap(bytes)

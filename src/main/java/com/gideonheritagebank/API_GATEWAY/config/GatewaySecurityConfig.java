@@ -1,10 +1,10 @@
 package com.gideonheritagebank.API_GATEWAY.config;
 
 import java.util.List;
-import java.util.Objects;
 
 import com.gideonheritagebank.API_GATEWAY.error.JsonAccessDeniedHandler;
 import com.gideonheritagebank.API_GATEWAY.error.JsonAuthenticationEntryPoint;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -15,18 +15,18 @@ import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
 import org.springframework.security.oauth2.core.OAuth2Error;
 import org.springframework.security.oauth2.core.OAuth2TokenValidator;
 import org.springframework.security.oauth2.core.OAuth2TokenValidatorResult;
+import org.springframework.security.oauth2.jose.jws.SignatureAlgorithm;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtValidators;
 import org.springframework.security.oauth2.jwt.NimbusReactiveJwtDecoder;
 import org.springframework.security.oauth2.jwt.ReactiveJwtDecoder;
-import org.springframework.security.web.server.SecurityWebFilterChain;
-import org.springframework.security.web.server.csrf.CookieServerCsrfTokenRepository;
-import org.springframework.security.oauth2.jose.jws.SignatureAlgorithm;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.oauth2.server.resource.authentication.ReactiveJwtAuthenticationConverterAdapter;
+import org.springframework.security.web.server.SecurityWebFilterChain;
+import org.springframework.security.web.server.csrf.CookieServerCsrfTokenRepository;
+import org.springframework.security.web.server.csrf.ServerCsrfTokenRequestAttributeHandler;
 import org.springframework.security.web.server.util.matcher.ServerWebExchangeMatcher;
 import org.springframework.web.cors.CorsConfiguration;
-import reactor.core.publisher.Mono;
 import org.springframework.web.cors.reactive.CorsConfigurationSource;
 import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource;
 
@@ -93,10 +93,24 @@ public class GatewaySecurityConfig {
                 );
 
         return http
+                .cors(cors -> cors
+                        .configurationSource(corsConfigurationSource)
+                )
+
                 .csrf(csrf -> csrf
                         .csrfTokenRepository(
                                 CookieServerCsrfTokenRepository.withHttpOnlyFalse()
                         )
+
+                        // Accept the plain CSRF token supplied in the
+                        // X-XSRF-TOKEN header by Postman or a frontend.
+                        .csrfTokenRequestHandler(
+                                new ServerCsrfTokenRequestAttributeHandler()
+                        )
+
+                        // Ensure CSRF failures use our JSON error handler.
+                        .accessDeniedHandler(accessDeniedHandler)
+
                         .requireCsrfProtectionMatcher(exchange -> {
                             String path = exchange.getRequest()
                                     .getURI()
@@ -123,11 +137,9 @@ public class GatewaySecurityConfig {
                             boolean requireCsrf =
                                     !isSafeMethod && !isPublicAuthEndpoint;
 
-                            return Mono.just(
-                                    Objects.requireNonNull((requireCsrf
-                                            ? ServerWebExchangeMatcher.MatchResult.match()
-                                            : ServerWebExchangeMatcher.MatchResult.notMatch()).block())
-                            );
+                            return requireCsrf
+                                    ? ServerWebExchangeMatcher.MatchResult.match()
+                                    : ServerWebExchangeMatcher.MatchResult.notMatch();
                         })
                 )
 
@@ -137,13 +149,15 @@ public class GatewaySecurityConfig {
 
                 .authorizeExchange(exchanges -> exchanges
 
-                        // CORS preflight must be handled without authentication.
-                        .pathMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        // CORS preflight requests.
+                        .pathMatchers(HttpMethod.OPTIONS, "/**")
+                        .permitAll()
 
                         .pathMatchers(
                                 HttpMethod.GET,
                                 "/actuator/health",
-                                "/actuator/health/**", "/actuator/gateway/routes",
+                                "/actuator/health/**",
+                                "/actuator/gateway/routes",
                                 "/actuator/gateway/routes/**"
                         ).permitAll()
 
@@ -179,15 +193,20 @@ public class GatewaySecurityConfig {
                                 "SCOPE_risk:read"
                         )
 
-                        .pathMatchers(HttpMethod.GET, "/csrf").permitAll()
+                        .pathMatchers(HttpMethod.GET, "/csrf")
+                        .permitAll()
 
-                        .pathMatchers("/fallback/**").permitAll()
+                        .pathMatchers("/fallback/**")
+                        .permitAll()
 
-                        .pathMatchers("/actuator/**").denyAll()
+                        .pathMatchers("/actuator/**")
+                        .denyAll()
 
-                        .pathMatchers("/api/v1/**").authenticated()
+                        .pathMatchers("/api/v1/**")
+                        .authenticated()
 
-                        .anyExchange().permitAll()
+                        .anyExchange()
+                        .permitAll()
                 )
 
                 .oauth2ResourceServer(oauth2 -> oauth2
@@ -250,4 +269,3 @@ public class GatewaySecurityConfig {
         return decoder;
     }
 }
-

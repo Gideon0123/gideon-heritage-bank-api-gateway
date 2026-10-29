@@ -58,13 +58,10 @@ public class GatewayRequestLoggingWebFilter implements WebFilter {
 
         return chain.filter(updatedExchange)
                 .doFinally(signal -> {
-                    long durationMs =
-                            (System.nanoTime() - startNanos) / 1_000_000;
+                    long durationMs = (System.nanoTime() - startNanos) / 1_000_000;
 
-                    Integer status = updatedExchange.getResponse()
-                            .getStatusCode() != null
-                            ? updatedExchange.getResponse()
-                            .getStatusCode().value()
+                    Integer status = updatedExchange.getResponse().getStatusCode() != null
+                            ? updatedExchange.getResponse().getStatusCode().value()
                             : null;
 
                     log.info(

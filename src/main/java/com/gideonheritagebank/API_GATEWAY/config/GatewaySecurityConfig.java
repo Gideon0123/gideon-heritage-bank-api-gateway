@@ -1,6 +1,7 @@
 package com.gideonheritagebank.API_GATEWAY.config;
 
 import java.util.List;
+import java.util.Objects;
 
 import com.gideonheritagebank.API_GATEWAY.error.JsonAccessDeniedHandler;
 import com.gideonheritagebank.API_GATEWAY.error.JsonAuthenticationEntryPoint;
@@ -23,7 +24,9 @@ import org.springframework.security.web.server.csrf.CookieServerCsrfTokenReposit
 import org.springframework.security.oauth2.jose.jws.SignatureAlgorithm;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.oauth2.server.resource.authentication.ReactiveJwtAuthenticationConverterAdapter;
+import org.springframework.security.web.server.util.matcher.ServerWebExchangeMatcher;
 import org.springframework.web.cors.CorsConfiguration;
+import reactor.core.publisher.Mono;
 import org.springframework.web.cors.reactive.CorsConfigurationSource;
 import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource;
 
@@ -90,12 +93,42 @@ public class GatewaySecurityConfig {
                 );
 
         return http
-                .cors(cors -> cors.configurationSource(corsConfigurationSource))
-
                 .csrf(csrf -> csrf
                         .csrfTokenRepository(
                                 CookieServerCsrfTokenRepository.withHttpOnlyFalse()
                         )
+                        .requireCsrfProtectionMatcher(exchange -> {
+                            String path = exchange.getRequest()
+                                    .getURI()
+                                    .getPath();
+
+                            HttpMethod method = exchange.getRequest()
+                                    .getMethod();
+
+                            boolean isSafeMethod =
+                                    method == HttpMethod.GET
+                                            || method == HttpMethod.HEAD
+                                            || method == HttpMethod.OPTIONS
+                                            || method == HttpMethod.TRACE;
+
+                            boolean isPublicAuthEndpoint =
+                                    path.equals("/api/v1/identity/auth/register")
+                                            || path.equals("/api/v1/identity/auth/login")
+                                            || path.equals("/api/v1/identity/auth/logout")
+                                            || path.equals("/api/v1/identity/auth/verify-email")
+                                            || path.equals("/api/v1/identity/auth/forgot-password")
+                                            || path.equals("/api/v1/identity/auth/reset-password")
+                                            || path.equals("/api/v1/identity/auth/refresh-token");
+
+                            boolean requireCsrf =
+                                    !isSafeMethod && !isPublicAuthEndpoint;
+
+                            return Mono.just(
+                                    Objects.requireNonNull((requireCsrf
+                                            ? ServerWebExchangeMatcher.MatchResult.match()
+                                            : ServerWebExchangeMatcher.MatchResult.notMatch()).block())
+                            );
+                        })
                 )
 
                 .httpBasic(ServerHttpSecurity.HttpBasicSpec::disable)
@@ -110,7 +143,8 @@ public class GatewaySecurityConfig {
                         .pathMatchers(
                                 HttpMethod.GET,
                                 "/actuator/health",
-                                "/actuator/health/**"
+                                "/actuator/health/**", "/actuator/gateway/routes",
+                                "/actuator/gateway/routes/**"
                         ).permitAll()
 
                         .pathMatchers(
@@ -121,6 +155,11 @@ public class GatewaySecurityConfig {
                                 "/api/v1/identity/auth/forgot-password",
                                 "/api/v1/identity/auth/reset-password",
                                 "/api/v1/identity/auth/refresh-token"
+                        ).permitAll()
+
+                        .pathMatchers(
+                                HttpMethod.GET,
+                                "/api/v1/identity/auth/csrf"
                         ).permitAll()
 
                         .pathMatchers("/api/v1/identity/staff/**")

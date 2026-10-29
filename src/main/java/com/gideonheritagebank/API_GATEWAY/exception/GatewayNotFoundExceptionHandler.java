@@ -14,8 +14,7 @@ import org.springframework.cloud.gateway.support.ServerWebExchangeUtils;
 
 @Component
 @Order(-2)
-public class GatewayNotFoundExceptionHandler
-        implements WebExceptionHandler {
+public class GatewayNotFoundExceptionHandler implements WebExceptionHandler {
 
     private final GatewayErrorResponseWriter errorResponseWriter;
 

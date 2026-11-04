@@ -130,6 +130,7 @@ public class GatewaySecurityConfig {
                                             || path.equals("/api/v1/identity/auth/login")
                                             || path.equals("/api/v1/identity/auth/logout")
                                             || path.equals("/api/v1/identity/auth/verify-email")
+                                            || path.equals("/api/v1/identity/auth/resend-verification")
                                             || path.equals("/api/v1/identity/auth/forgot-password")
                                             || path.equals("/api/v1/identity/auth/reset-password")
                                             || path.equals("/api/v1/identity/auth/refresh-token");
@@ -166,6 +167,7 @@ public class GatewaySecurityConfig {
                                 "/api/v1/identity/auth/login",
                                 "/api/v1/identity/auth/register",
                                 "/api/v1/identity/auth/verify-email",
+                                "/api/v1/identity/auth/resend-verification",
                                 "/api/v1/identity/auth/forgot-password",
                                 "/api/v1/identity/auth/reset-password",
                                 "/api/v1/identity/auth/refresh-token"

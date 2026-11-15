@@ -34,8 +34,10 @@ import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource;
 @EnableWebFluxSecurity
 public class GatewaySecurityConfig {
 
+
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
+
         CorsConfiguration configuration = new CorsConfiguration();
 
         configuration.setAllowedOrigins(List.of(
@@ -57,7 +59,14 @@ public class GatewaySecurityConfig {
                 "Content-Type",
                 "Accept",
                 "X-Request-Id",
-                "X-XSRF-TOKEN"
+                "X-Correlation-ID",
+                "X-XSRF-TOKEN",
+                "Idempotency-Key"
+        ));
+
+        configuration.setExposedHeaders(List.of(
+                "X-Correlation-ID",
+                "X-Request-Id"
         ));
 
         configuration.setAllowCredentials(true);
@@ -70,6 +79,7 @@ public class GatewaySecurityConfig {
 
         return source;
     }
+
 
     @Bean
     public SecurityWebFilterChain gatewaySecurityFilterChain(
@@ -172,7 +182,11 @@ public class GatewaySecurityConfig {
                         .hasAnyAuthority(
                                 "ROLE_STAFF",
                                 "ROLE_BRANCH_MANAGER",
-                                "ROLE_ADMIN"
+                                "ROLE_ADMIN",
+                                "ROLE_MANAGER",
+                                "ROLE_CASHIER",
+                                "ROLE_SUPPORT_AGENT",
+                                "ROLE_RISK_OFFICER"
                         )
 
                         .pathMatchers("/api/v1/identity/admin/**")

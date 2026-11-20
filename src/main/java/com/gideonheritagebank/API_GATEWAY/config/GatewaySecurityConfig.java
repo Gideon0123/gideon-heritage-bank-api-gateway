@@ -126,8 +126,7 @@ public class GatewaySecurityConfig {
                                     .getURI()
                                     .getPath();
 
-                            HttpMethod method = exchange.getRequest()
-                                    .getMethod();
+                            HttpMethod method = exchange.getRequest().getMethod();
 
                             boolean isSafeMethod =
                                     method == HttpMethod.GET
@@ -162,6 +161,14 @@ public class GatewaySecurityConfig {
                         ).permitAll()
 
                         .pathMatchers(
+                                "/swagger-ui.html",
+                                "/swagger-ui/**",
+                                "/v3/api-docs",
+                                "/v3/api-docs/**",
+                                "/v3/api-docs.yaml"
+                        ).permitAll()
+
+                        .pathMatchers(
                                 HttpMethod.POST,
                                 "/api/v1/identity/auth/login",
                                 "/api/v1/identity/auth/register",
@@ -170,7 +177,8 @@ public class GatewaySecurityConfig {
                                 "/api/v1/identity/auth/forgot-password",
                                 "/api/v1/identity/auth/reset-password",
                                 "/api/v1/identity/auth/refresh-token",
-                                "/api/v1/identity/staff/onboarding/complete"
+                                "/api/v1/identity/staff/onboarding/complete",
+                                "/api/v1/identity/email-change/verify"
                         ).permitAll()
 
                         .pathMatchers(
@@ -211,6 +219,14 @@ public class GatewaySecurityConfig {
                         .pathMatchers("/api/v1/**")
                         .authenticated()
 
+                        .pathMatchers(
+                                "/swagger-ui.html",
+                                "/swagger-ui/**",
+                                "/v3/api-docs",
+                                "/v3/api-docs/**",
+                                "/v3/api-docs.yaml"
+                        ).permitAll()
+
                         .anyExchange()
                         .permitAll()
                 )
@@ -240,6 +256,12 @@ public class GatewaySecurityConfig {
                         || path.equals("/api/v1/identity/auth/forgot-password")
                         || path.equals("/api/v1/identity/auth/reset-password")
                         || path.equals("/api/v1/identity/auth/refresh-token")
+                        || path.equals("/api/v1/identity/email-change/verify")
+                        || path.equals("/swagger-ui.html")
+                        || path.equals("/swagger-ui/**")
+                        || path.equals("/v3/api-docs")
+                        || path.equals("/v3/api-docs/**")
+                        || path.equals("/v3/api-docs.yaml")
                         || path.equals("/api/v1/identity/staff/onboarding/complete");
 
         return !isSafeMethod && !isPublicAuthEndpoint;
